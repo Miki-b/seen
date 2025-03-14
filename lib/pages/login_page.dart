@@ -1,38 +1,34 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:seen/auth/auth_services.dart';
 import 'package:seen/components/my_button.dart';
 import 'package:seen/components/my_textfield.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 
-class LoginPage extends StatefulWidget {
-  final void Function()? onTap; // Corrected declaration
+class LoginPage extends ConsumerStatefulWidget {
+  final void Function()? onTap;
 
   const LoginPage({super.key, required this.onTap});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final TextEditingController _phoneNumberController = TextEditingController();
   final TextEditingController _otpController = TextEditingController();
   String? phoneNumber;
-  final PhoneAuthService _phoneAuthService = PhoneAuthService();
   bool otpSent = false;
 
   void _sendOTP() {
     if (phoneNumber == null || phoneNumber!.isEmpty) {
-      print(phoneNumber);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please enter a valid phone number.")),
-
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter a valid phone number.")));
       return;
     }
 
-    _phoneAuthService.verifyPhoneNumber(
-      phoneNumber!, // Use the formatted number
+    final phoneAuthService = ref.read(phoneAuthServiceProvider);
+    phoneAuthService.sendOtp(
+      phoneNumber!,
           () {
         setState(() {
           otpSent = true;
@@ -45,24 +41,22 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-
   void _verifyOTP() async {
-    print("Entered OTP: ${_otpController.text}");
     if (_otpController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Please enter OTP!")));
       return;
     }
 
-    UserCredential? userCredential = await _phoneAuthService.signInWithOTP(_otpController.text);
+    final phoneAuthService = ref.read(phoneAuthServiceProvider);
+    var session = await phoneAuthService.verifyOtp(_otpController.text);
 
-    if (userCredential != null) {
+    if (session != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Phone number verified!")));
-      // Navigate to home page or dashboard
+      // Navigate to home page
     } else {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Invalid OTP! Please try again.")));
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -92,7 +86,7 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               ),
               Text(
-                "Please enter your country phone number",
+                "Please enter your phone number",
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontSize: 16,
@@ -115,10 +109,6 @@ class _LoginPageState extends State<LoginPage> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.white, width: 2),
-                  ),
                   filled: true,
                   fillColor: Colors.grey.shade100,
                 ),
@@ -132,13 +122,14 @@ class _LoginPageState extends State<LoginPage> {
 
               const SizedBox(height: 5),
 
-              // Password field
+              // OTP field
               otpSent
-                  ?MyTextfield(
+                  ? MyTextfield(
                 isPassword: true,
                 labelText: "OTP",
                 controller: _otpController,
-              ):Container(),
+              )
+                  : Container(),
 
               const SizedBox(height: 15),
 
@@ -156,7 +147,7 @@ class _LoginPageState extends State<LoginPage> {
                     style: TextStyle(color: Theme.of(context).colorScheme.primary),
                   ),
                   GestureDetector(
-                    onTap: widget.onTap, // Correct usage
+                    onTap: widget.onTap,
                     child: Text(
                       " Register now",
                       style: TextStyle(

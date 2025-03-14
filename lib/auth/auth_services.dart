@@ -1,54 +1,50 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:appwrite/appwrite.dart';
+import 'package:appwrite/models.dart';
+import 'package:seen/providers/appwrite_provider.dart';
+
+final phoneAuthServiceProvider = Provider<PhoneAuthService>((ref) {
+  final account = ref.watch(appwriteAccountProvider);
+  return PhoneAuthService(account: account);
+});
 
 class PhoneAuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  String _verificationId = "";
+  final Account account;
+  String? _userId; // Store user ID from token
 
-  /// ✅ Step 1: Send OTP to Phone Number
-  Future<void> verifyPhoneNumber(String phoneNumber, Function onCodeSent, Function onVerificationFailed) async {
-    print(phoneNumber);
-    _verificationId = ""; // Reset before sending OTP
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      timeout: const Duration(seconds: 60),
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        await _auth.signInWithCredential(credential);
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        onVerificationFailed(e.message);
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        _verificationId = verificationId;
-        onCodeSent();
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {
-        _verificationId = verificationId;
-      },
-    );
-  }
+  PhoneAuthService({required this.account});
 
-
-  /// ✅ Step 2: Verify OTP and Sign In User
-  Future<UserCredential?> signInWithOTP(String otp) async {
+  /// Step 1: Send OTP to Phone Number
+  Future<void> sendOtp(String phoneNumber, Function onSuccess, Function(String) onError) async {
     try {
-      PhoneAuthCredential credential = PhoneAuthProvider.credential(
-        verificationId: _verificationId,
-        smsCode: otp,
+      final token = await account.createPhoneToken(
+        userId: ID.unique(), // Create a new user ID
+        phone: phoneNumber,
       );
-      return await _auth.signInWithCredential(credential);
+
+      _userId = token.userId; // Store user ID for verification
+      onSuccess();
     } catch (e) {
-      return null;
+      onError(e.toString());
     }
   }
 
-  /// ✅ Step 3: Logout
-  Future<void> signOut() async {
-    await _auth.signOut();
-  }
+  /// Step 2: Verify OTP and Sign In User
+  Future<Session?> verifyOtp(String otp) async {
+    try {
+      if (_userId == null) {
+        throw Exception("User ID is missing. Please request OTP first.");
+      }
 
-  /// ✅ Step 4: Check if User is Logged In
-  User? getCurrentUser() {
-    return _auth.currentUser;
+      final session = await account.createSession(
+        userId: _userId!,  // Use the stored user ID
+        secret: otp,  // OTP from SMS
+      );
+
+      return session;
+    } catch (e) {
+      print('Error verifying OTP: $e');
+      return null;
+    }
   }
 }
