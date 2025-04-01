@@ -13,7 +13,8 @@ Color hexToColor(String hexColor) {
 }
 ThemeData lightMode= ThemeData(
     colorScheme: ColorScheme.light(
-        surface: hexToColor('#DEF2EF'),
+        surface: Colors.white,
+        //surface: hexToColor('#DEF2EF'),
         primary: hexToColor('#3C8E85'),
         secondary: hexToColor('#3B4856'),
         tertiary: Colors.white,

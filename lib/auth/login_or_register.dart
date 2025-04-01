@@ -18,10 +18,6 @@ class LoginorRegister extends StatefulWidget {
    }
    @override
    Widget build(BuildContext context) {
-     if (showLoginPage){
-       return LoginPage(onTap: switchPage);
-     }else {
        return RegisterPage(onTap: switchPage,);
-     }
    }
  }

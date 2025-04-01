@@ -1,15 +1,33 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:seen/components/seen_drawer.dart';
+//import 'package:seen/auth/auth_service.dart';
 
-class Home extends StatefulWidget {
-  const Home({super.key});
+import '../providers/appwrite_provider.dart'; // Adjust import path as needed
+
+class HomePage extends ConsumerWidget {
+  const HomePage({super.key});
 
   @override
-  State<Home> createState() => _HomeState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final phoneAuthService = ref.read(phoneAuthServiceProvider);
 
-class _HomeState extends State<Home> {
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Home"),
+        actions: [
+          IconButton(
+          onPressed: () async {
+    await phoneAuthService.logout(context);
+    },
+      icon: const Icon(Icons.logout),
+
+    ),
+
+        ],
+        elevation: 10,
+      ),
+      drawer: SeenDrawer(),
+    );
   }
 }

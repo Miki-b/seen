@@ -19,8 +19,6 @@ class _SeenDrawerState extends ConsumerState<SeenDrawer> {
   @override
   Widget build(BuildContext context) {
     final userInfo = ref.watch(userInfoProvider);
-    final phoneAuthService = ref.read(phoneAuthServiceProvider);
-
 
     return userInfo.when(
       loading: () => const Center(child: CircularProgressIndicator()), // Show loading state
@@ -37,9 +35,9 @@ class _SeenDrawerState extends ConsumerState<SeenDrawer> {
                     child: Column(
                       children: [
                         SeenProfilePicBig(imagePath: "assets/no-user-Image.png"),
-
+                        const SizedBox(height: 5),
                         Text(user.userName.isNotEmpty ? user.userName : user.userId),
-
+                        //const SizedBox(height: 5),
                         GestureDetector(
                           onTap: () {
                             Navigator.push(
@@ -75,8 +73,7 @@ class _SeenDrawerState extends ConsumerState<SeenDrawer> {
                       title: Text("S E T T I N G S"),
                       leading: Icon(Icons.settings),
                       onTap: () {
-                        Navigator.push(context,MaterialPageRoute(builder: (context)=>SettingsPage()));
-
+                        Navigator.push(context, MaterialPageRoute(builder: (context)=>SettingsPage()));
                       },
                     ),
                   ),
@@ -86,9 +83,7 @@ class _SeenDrawerState extends ConsumerState<SeenDrawer> {
                     child: ListTile(
                       title: Text("L O G O U T"),
                       leading: Icon(Icons.logout),
-                      onTap: () async {
-                        await phoneAuthService.logout(context);
-                      },
+                      onTap: () {},
                     ),
                   ),
                 ],

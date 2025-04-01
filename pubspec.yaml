@@ -45,6 +45,7 @@ dependencies:
   flutter_riverpod: ^2.4.9
   riverpod_annotation: ^2.2.0
   build_runner: ^2.4.6
+  shared_preferences: ^2.5.2
 dependency_overrides:
   flutter_web_auth_2: ^4.1.0
 
