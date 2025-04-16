@@ -1,11 +1,13 @@
 import 'package:appwrite/appwrite.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../auth/auth_services.dart';
+import 'package:seen/Services/user_services/user_services.dart';
+import '../Classes/users.dart';
+import '../Services/auth/auth_services.dart';
 
 final appwriteClientProvider = Provider<Client>((ref) {
   return Client()
       .setEndpoint("https://cloud.appwrite.io/v1")
-      .setProject('67ea91f5000cdfff2747');
+      .setProject('67d3da95002d05ad4983');
 });
 
 final appwriteAccountProvider = Provider<Account>((ref) {
@@ -17,7 +19,10 @@ final phoneAuthServiceProvider = Provider<PhoneAuthService>((ref) {
   final account = ref.watch(appwriteAccountProvider);
   return PhoneAuthService(account: account, ref: ref); // Pass ref here
 });
-
+final EmailPasswordAuthServiceProvider = Provider<EmailPasswordAuthService>((ref) {
+  final account = ref.watch(appwriteAccountProvider);
+  return EmailPasswordAuthService(account: account, ref: ref); // Pass ref here
+});
 class AuthNotifier extends StateNotifier<bool> {
   AuthNotifier() : super(false); // Default: not authenticated
 
@@ -29,25 +34,38 @@ final authStateProvider = StateNotifierProvider<AuthNotifier, bool>((ref) {
   return AuthNotifier();
 });
 
-final userInfoProvider = FutureProvider<User>((ref) async {
-  final account = ref.watch(appwriteAccountProvider);
-  final user = await account.get();
-  return User(
-    phoneNumber: user.phone,
-    userId: user.$id,
-    userName: user.name,
-  );
+final appwriteDatabaseProvider = Provider<Databases>((ref) {
+  final client = ref.read(appwriteClientProvider);
+  return Databases(client);
 });
 
-// User Model
-class User {
-  final String userId;
-  final String phoneNumber;
-  final String userName;
 
-  User({
-    required this.phoneNumber,
-    required this.userId,
-    required this.userName,
-  });
-}
+final userInfoProvider = FutureProvider<UserModel?>((ref) async {
+  final account = ref.watch(appwriteAccountProvider);
+  final database = ref.read(appwriteDatabaseProvider);
+  final user_service = userServices();
+
+  try {
+    // Fetch user account details
+    final user = await account.get();
+
+    // Convert Appwrite Account object to UserModel
+    final userModel = UserModel(
+      userId: user.$id,
+      username: user.name ?? "Unknown",  // Ensure username is not null
+      phoneNumber: user.phone ?? "Unknown",
+      profilePic: "",  // You might need a default profile pic URL
+      status: "",
+      lastActive: DateTime.now(),
+    );
+
+    // Save user to database (if not already saved)
+    await user_service.saveUserToDatabase(userModel, database);
+
+    // Return user info from the database
+    return await user_service.getUser(user.$id, database);
+  } catch (e) {
+    print("Error in userInfoProvider: $e");
+    return null;
+  }
+});

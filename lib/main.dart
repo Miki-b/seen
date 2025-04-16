@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:seen/auth/auth_gate.dart';
-import 'package:seen/auth/login_or_register.dart';
+import 'package:seen/Services/auth/auth_gate.dart';
+import 'package:seen/Services/auth/login_or_register.dart';
 import 'package:seen/pages/home.dart';
 import 'package:seen/pages/login_page.dart';
 import 'package:seen/providers/appwrite_provider.dart';
@@ -25,7 +25,7 @@ class MyApp extends ConsumerWidget {
       title: 'Seen',
       debugShowCheckedModeBanner: false,
       theme: lightMode,
-      home: isAuthenticated ? const HomePage() : const LoginPage(),
+      home: AuthGate(),
     );
   }
 }

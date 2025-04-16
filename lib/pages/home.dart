@@ -8,10 +8,11 @@ import '../providers/appwrite_provider.dart'; // Adjust import path as needed
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final phoneAuthService = ref.read(phoneAuthServiceProvider);
-
+    //final userInfo = ref.watch(userInfoProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text("Home"),

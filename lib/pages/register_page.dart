@@ -1,90 +1,73 @@
 import 'package:flutter/material.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
-import '../auth/phone_auth.dart'; // Ensure this path matches your project structure
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../components/my_button.dart';
 import '../components/my_textfield.dart';
+import '../providers/appwrite_provider.dart';
 
-class RegisterPage extends StatefulWidget {
+class RegisterPage extends ConsumerStatefulWidget {
   final void Function()? onTap;
-  const RegisterPage({super.key, required this.onTap});
+  final void Function(String userId, String secret)? onVerificationRequested;
+  const RegisterPage({super.key, required this.onTap, this.onVerificationRequested});
+
+
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
-  final TextEditingController _phoneNumberController = TextEditingController();
-  final TextEditingController _otpController = TextEditingController();
-  String? phoneNumber;
-  bool otpSent = false;
+class _RegisterPageState extends ConsumerState<RegisterPage> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
   bool isLoading = false;
 
-  // Function to send OTP
-  void _sendOTP() async {
-    if (phoneNumber == null || phoneNumber!.isEmpty) {
+  void _registerUser() async {
+    setState(() => isLoading = true);
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a valid phone number.")),
+        const SnackBar(content: Text("Please fill in all fields.")),
       );
+      setState(() => isLoading = false);
       return;
     }
 
-    setState(() => isLoading = true);
-
     try {
-      final response = await OTPService.sendOTP(phoneNumber!);
+      final auth = ref.read(EmailPasswordAuthServiceProvider);
 
-      if (response["success"] == true) {
-        setState(() {
-          otpSent = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("OTP Sent Successfully")),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response["message"] ?? "Failed to send OTP")),
-        );
+      // Step 1: Create a new user
+      await auth.createUser(email, password);
+
+      // Step 2: Log in the user
+      await auth.createEmailSession(email: email, password: password);
+      // Step 3: Send email verification
+      final account = ref.read(appwriteAccountProvider);
+      final verification = await account.createVerification(
+        url: 'https://example.com/verify', // Replace with your actual domain
+      );
+      // Step 4: Navigate to verification screen
+      if (widget.onVerificationRequested != null) {
+        widget.onVerificationRequested!(verification.userId, verification.secret);
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Account created successfully!")),
+      );
+
+      // TODO: Navigate to your main page or home screen
+      // Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage()));
+
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
+        SnackBar(content: Text("Registration failed: ${e.toString()}")),
       );
+    } finally {
+      setState(() => isLoading = false);
     }
-
-    setState(() => isLoading = false);
-  }
-
-  // Function to verify OTP
-  void _verifyOTP() async {
-    if (_otpController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter OTP!")),
-      );
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    try {
-      final response = await OTPService.verifyOTP(phoneNumber!, _otpController.text);
-
-      if (response["success"] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Phone number verified!")),
-        );
-        // Navigate to next screen (e.g., Home Page)
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response["message"] ?? "Invalid OTP! Please try again.")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
-      );
-    }
-
-    setState(() => isLoading = false);
   }
 
   @override
@@ -107,7 +90,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
 
               Text(
-                "Please enter your country phone number",
+                "Please enter your Email",
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontSize: 16,
@@ -115,61 +98,27 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
 
               const SizedBox(height: 16),
-
-              // Phone number field
-              IntlPhoneField(
-                controller: _phoneNumberController,
-                decoration: InputDecoration(
-                  labelText: 'Phone Number',
-                  labelStyle: TextStyle(color: Colors.grey.shade700, fontSize: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.blueAccent),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Colors.white, width: 2),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                ),
-                initialCountryCode: 'ET', // Ethiopia
-                onChanged: (phone) {
-                  setState(() {
-                    phoneNumber = phone.completeNumber.trim();
-                  });
-                },
-              ),
+              MyTextfield(labelText: "Email", controller: _emailController),
 
               const SizedBox(height: 5),
 
-              // OTP field
-              otpSent
-                  ? MyTextfield(
+              MyTextfield(
                 isPassword: true,
-                labelText: "OTP",
-                controller: _otpController,
-              )
-                  : Container(),
+                labelText: "Password",
+                controller: _passwordController,
+              ),
 
               const SizedBox(height: 15),
 
-              // Loading indicator
-              if (isLoading)
-                const CircularProgressIndicator()
-              else
-                MyButton(
-                  buttonText: otpSent ? "Verify OTP" : "Send OTP",
-                  onTap: otpSent ? _verifyOTP : _sendOTP,
-                ),
+              isLoading
+                  ? const CircularProgressIndicator()
+                  : MyButton(
+                buttonText: "Register User",
+                onTap: _registerUser,
+              ),
 
               const SizedBox(height: 15),
 
-              // Already have an account? Login
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

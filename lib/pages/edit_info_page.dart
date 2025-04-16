@@ -14,7 +14,7 @@ class EditInfoPage extends ConsumerStatefulWidget {
 class _EditInfoPageState extends ConsumerState<EditInfoPage> {
   late TextEditingController _nameController;
   String userId = "";
-  bool _isSaving = false; // Show loading indicator when saving
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -40,8 +40,10 @@ class _EditInfoPageState extends ConsumerState<EditInfoPage> {
       ),
       body: userInfoAsync.when(
         data: (user) {
-          _nameController.text = user.userName;
-          userId = user.userId;
+          if (_nameController.text.isEmpty) {  // ✅ Prevent overriding every build
+            _nameController.text = user?.username ?? "";
+            userId = user?.userId ?? "";
+          }
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -49,10 +51,8 @@ class _EditInfoPageState extends ConsumerState<EditInfoPage> {
               children: [
                 SeenProfilePicBig(imagePath: "assets/no-user-Image.png"),
                 const SizedBox(height: 16),
-                // Editable User Name
                 EditableTextField(controller: _nameController),
                 const SizedBox(height: 16),
-                // Non-editable Phone Number
                 TextField(
                   enabled: false,
                   decoration: InputDecoration(
@@ -64,7 +64,7 @@ class _EditInfoPageState extends ConsumerState<EditInfoPage> {
                     fillColor: Colors.grey.shade100,
                   ),
                   style: const TextStyle(fontSize: 18, color: Colors.black),
-                  controller: TextEditingController(text: user.phoneNumber),
+                  controller: TextEditingController(text: user?.phoneNumber ?? ""), // ✅ Prevent null issues
                 ),
               ],
             ),
@@ -98,5 +98,4 @@ class _EditInfoPageState extends ConsumerState<EditInfoPage> {
 
     setState(() => _isSaving = false);
   }
-
 }

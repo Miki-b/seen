@@ -22,7 +22,7 @@ class _EditableTextFieldState extends ConsumerState<EditableTextField> {
       loading: () => const CircularProgressIndicator(), // Show loading state
       error: (err, stack) => Text("Error: $err"), // Handle errors
       data: (user) {
-        widget.controller.text = user.userName.isNotEmpty ? user.userName : user.userId;
+        widget.controller.text = user!.username.isNotEmpty ? user.username : user.userId;
 
         return TextField(
           controller: widget.controller,

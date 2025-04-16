@@ -36,7 +36,7 @@ class _SeenDrawerState extends ConsumerState<SeenDrawer> {
                       children: [
                         SeenProfilePicBig(imagePath: "assets/no-user-Image.png"),
                         const SizedBox(height: 5),
-                        Text(user.userName.isNotEmpty ? user.userName : user.userId),
+                        Text(user?.username ?? user?.userId ?? "Unknown User"),
                         //const SizedBox(height: 5),
                         GestureDetector(
                           onTap: () {

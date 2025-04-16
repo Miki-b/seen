@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../providers/appwrite_provider.dart';
+import '../../providers/appwrite_provider.dart';
+
 import 'auth_gate.dart';
 
 class PhoneAuthService {
@@ -42,16 +43,17 @@ class PhoneAuthService {
       if (_userId == null) {
         throw Exception("User ID is missing. Please request OTP again.");
       }
-
-      // Verify OTP using updatePhoneToken (New method in Appwrite 15)
-      final token = await account.updatePhoneSession(
+      //final session = await account;
+      //Verify OTP using updatePhoneToken (New method in Appwrite 15)
+      final session = await account.updatePhoneSession(
         userId: _userId!,
         secret: otp,
       );
 
+
       ref.read(authStateProvider.notifier).state = true;
 
-      return token;
+      return session;
     } catch (e) {
       print('Error verifying OTP: $e');
       return null;
@@ -78,4 +80,62 @@ class PhoneAuthService {
       print('Error logging out: $e');
     }
   }
+}
+class EmailPasswordAuthService{
+  final Account account;
+  final Ref ref;
+  String? _userId;
+
+  EmailPasswordAuthService({required this.account, required this.ref});
+
+  /// **Step 1: Send OTP to Phone Number**
+  Future<User> createUser(
+      String email,  String password) async {
+
+      final user = await account.create(
+          userId: ID.unique(),
+          email: email,
+          password: password,
+          name: 'Unknown User');
+
+      return user;
+
+      // _userId = token.userId;
+      // final prefs = await SharedPreferences.getInstance();
+      // await prefs.setString('userId', _userId!);
+
+
+
+  }
+  Future<Session> createEmailSession(
+      {required String email, required String password}) async {
+
+
+      final session =
+      await account.createEmailPasswordSession(email: email, password: password);
+      ref.read(authStateProvider.notifier).login();
+      return session;
+  }
+
+  /// **Step 3: Logout User**
+  Future<void> logout(BuildContext context) async {
+    try {
+      await account.deleteSession(sessionId: 'current');
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('userId');
+
+      ref.read(authStateProvider.notifier).logout();
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const AuthGate()),
+            (route) => false,
+      );
+
+      print('User logged out successfully.');
+    } catch (e) {
+      print('Error logging out: $e');
+    }
+  }
+
 }
